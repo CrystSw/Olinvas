@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta http-equiv="Pragma" content="no-cache"/>
+		<meta http-equiv="Cache-Control" content="no-cache">
+		<title>Olinvas - オンラインで利用可能な仮想ホワイトボード</title>
+		<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css"/>
+		<script type="text/javascript" src="js/jquery-3.4.1.min.js"></script>
+		<script type="text/javascript" src="js/bootstrap.min.js"></script>
+		<script type="text/javascript" src="js/common.js?ver=1"></script>
+		<script type="text/javascript" src="js/olinvas.js?ver=1"></script>
+	</head>
+	<body class="bg-light">
+		<header class="sticky-top bg-primary text-white mb-2" style="font-size:2rem;">
+			Olinvas
+		</header>
+		<!--Canvas Main-->
+		<div id="main" class="container mb-5" hidden>
+			<div class="jumbotron mt-4 mx-auto">
+				<h1 id="room-name"role="none"></h1>
+				<ul id="main_room-info" style="white-space:nowrap;">
+					<li id="ri_ys_list"><b>ステータス：</b><wbr/><span id="ri_your-status"></span></li>
+					<li id="ri_fk_list" hidden><b>フレンドキー: </b><wbr/><span id="ri_room-friend-key"></span></li>
+					<li id="ri_su_list" hidden><b>共有URL: </b><wbr/><span id="ri_share-url"></span></li>
+				</ul>
+				<hr class="mt-5"/>
+				<ul id="main_info" style="white-space:nowrap;">
+					<li style="font-size:0.75rem;">他の人を招待するには，<wbr/>共有URLとルームパスワードを教えてあげてください．</li>
+					<li style="font-size:0.75rem;">ホスト以外の人が編集するには，<wbr/>ホストのフレンドキーを入力し認証する必要があります．</li>
+					<li style="font-size:0.75rem;">ホストが退席すると，<wbr/>ルームは自動的に閉鎖されます．</li>
+					<li style="font-size:0.75rem;">マウス・スタイラスペン(タッチペン)のみで描くことが出来ます．<wbr/>タッチ操作には対応していません．</li>
+					<li style="font-size:0.75rem;">(仕様)太い線を利用すると，見た目が変になります．</li>
+				</ul>
+			</div>
+			<hr/>
+			<div class="row">
+				<!--Color Palette-->
+				<div id="main_line-color" class="col-1 btn-group-vertical" hidden>
+					<a class="btn btn-outline-dark bg-dark" role="button" onclick="$(this).olinvas_client('changeLineColor', 0)"></a>
+					<a class="btn btn-outline-dark bg-primary" role="button" onclick="$(this).olinvas_client('changeLineColor', 1)"></a>
+					<a class="btn btn-outline-dark bg-danger" role="button" onclick="$(this).olinvas_client('changeLineColor', 2)"></a>
+					<a class="btn btn-outline-dark bg-success" role="button" onclick="$(this).olinvas_client('changeLineColor', 3)"></a>
+					<a class="btn btn-outline-dark bg-warning" role="button" onclick="$(this).olinvas_client('changeLineColor', 4)"></a>
+					<a class="btn btn-outline-dark bg-white" role="button" onclick="$(this).olinvas_client('changeLineColor', 5)"></a>
+				</div>
+				<!--Canvas-->
+				<div id="main_canvas-area" class="col m-2">
+					<canvas id="main_canvas" width=960 height=540 class="bg-white w-100" style="touch-action:none;"></canvas>
+					<!--Line Width-->
+					<div id="main_line-width-selector" hidden>
+						<span style="font-size:1.0rem;">線の太さ:</span>
+						<div id="main_canvas-command" class="col btn-group btn-group-justified">
+							<a class="btn btn-outline-dark bg-light text-center" role="button" onclick="$(this).olinvas_client('changeLineWidth', 0)">1</a>
+							<a class="btn btn-outline-dark bg-light text-center" role="button" onclick="$(this).olinvas_client('changeLineWidth', 1)">5</a>
+							<a class="btn btn-outline-dark bg-light text-center" role="button" onclick="$(this).olinvas_client('changeLineWidth', 2)">10</a>
+							<a class="btn btn-outline-dark bg-light text-center" role="button" onclick="$(this).olinvas_client('changeLineWidth', 3)">15</a>
+							<a class="btn btn-outline-dark bg-light text-center" role="button" onclick="$(this).olinvas_client('changeLineWidth', 4)">20</a>
+							<a id="main_canvas-all-erase"class="btn btn-outline-danger bg-light text-danger" role="button" onclick="$(this).olinvas_client('clearBoard')" hidden>全削除</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!--Console Main-->
+		<div id="room_manager" class="card border-info w-50 mx-auto m-2" style="z-index:1000;">
+			<div class="card-header bg-info text-white">
+				ルームマネージャ
+			</div>
+			<div class="card-body">
+				<div id="rm_join-room">
+					<div class="card-title bg-white text-info text-center">
+						ルーム参加
+					</div>
+					<div class="card-text bg-white text-black">
+						<strong>ルームパスワード:</strong>
+						<input id="rm_join-rpass" class="w-100" type="password" name="rpass" placeholder="ルームパスワードを入力"/><br/>
+						<div class="m-1 text-center">
+							<div id="sminfo_server-response-join" class="text-danger m-2"></div>
+							<button type="button" class="btn btn-info btn-sm" onclick="$(this).olinvas_client('joinRoom', getParam('id'), $('#rm_join-rpass').val())">参加</button>
+						</div>
+					</div>
+				</div>
+				<div id="rm_create-room">
+					<div class="card-title bg-white text-info text-center">
+						ルーム作成
+					</div>
+					<div class="card-text bg-white text-black">
+						<strong>ルーム名:</strong>
+						<input id="rm_create-rname" class="w-100" type="text" name="rname" placeholder="ルーム名を入力"/><br/>
+						<strong>ルームパスワード:</strong>
+						<input id="rm_create-rpass" class="w-100" type="password" name="rpass" placeholder="ルームパスワードを入力"/><br/>
+						<div class="m-1 text-center">
+							<div id="sminfo_server-response-create" class="text-danger m-2"></div>
+							<button type="button" class="btn btn-info btn-sm" onclick="$(this).olinvas_client('createRoom', $('#rm_create-rname').val(), $('#rm_create-rpass').val())">作成</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!--Dialog Main-->
+		<!--Room-close Dialog-->
+		<div id="info_room-close" class="card border-warning w-75 mx-auto fixed-top m-5" style="z-index:1050;" hidden>
+			<div class="card-header bg-warning text-black">
+				警告
+			</div>
+			<div class="card-body bg-white text-black text-center" style="white-space:nowrap;">
+				このルームはホストによって閉鎖されました．<wbr/>
+				これ以降編集することはできません．
+				<div class="m-2 text-center">
+					<button type="button" class="btn btn-warning btn-md" onclick="$('#info_room-close').fadeOut('fast'); unlockScreen('lock_room-close');">OK</button>
+				</div>
+			</div>
+		</div>
+		<!--Client-ban Dialog-->
+		<div id="info_client-ban" class="card border-warning w-75 mx-auto fixed-top m-5" style="z-index:1050;" hidden>
+			<div class="card-header bg-warning text-black">
+				警告
+			</div>
+			<div class="card-body bg-white text-black text-center" style="white-space:nowrap;">
+				このクライアントからの不審なパケットを過去複数回検出したため，<wbr/>現在接続を規制しています．<wbr/>
+				規制解除まで残り<span id="pardon-time"></span>分です．
+			</div>
+		</div>
+		<!--Too-connection Dialog-->
+		<div id="info_too-connection" class="card border-warning w-75 mx-auto fixed-top m-5" style="z-index:1050;" hidden>
+			<div class="card-header bg-warning text-black">
+				警告
+			</div>
+			<div class="card-body bg-white text-black text-center" style="white-space:nowrap;">
+				同時接続数の上限を超えているため切断されました．<wbr/>
+				不要なタブを閉じた上で，再度アクセスしてください．
+				<div class="m-2 text-center">
+					<button type="button" class="btn btn-warning btn-md" onclick="location.reload()">リトライ</button>
+				</div>
+			</div>
+		</div>
+		<!--Connection-reset Dialog-->
+		<div id="info_connection-reset" class="card border-warning w-75 mx-auto fixed-top m-5" style="z-index:1050;" hidden>
+			<div class="card-header bg-warning text-black">
+				警告
+			</div>
+			<div class="card-body bg-white text-black text-center" style="white-space:nowrap;">
+				接続がリセットされました．<wbr/>
+				後で再度アクセスしてください．
+				<div class="m-2 text-center">
+					<button type="button" class="btn btn-warning btn-md" onclick="location.reload()">リトライ</button>
+				</div>
+			</div>
+		</div>
+		<!--Server-side Error Dialog-->
+		<div id="info_server-error" class="card border-danger w-75 mx-auto fixed-top m-5" style="z-index:1050;" hidden>
+			<div class="card-header bg-danger text-white">
+				エラー
+			</div>
+			<div class="card-body bg-white text-black text-center" style="white-space:nowrap;">
+				サーバ側でエラーが発生しています．<wbr/>
+				後で再度アクセスしてください．
+				<div class="m-2 text-center">
+					<button type="button" class="btn btn-danger btn-md" onclick="location.reload()">リトライ</button>
+				</div>
+			</div>
+		</div>
+		<footer class="fixed-bottom bg-primary text-white">
+			Olinvas ver.1.0 (c) 2020 CrystSw
+		</footer>
+	</body>
+</html>

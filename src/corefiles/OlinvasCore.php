@@ -101,7 +101,11 @@ class OlinvasCore implements MessageComponentInterface {
 	public function onMessage(ConnectionInterface $from, $message){
 		//JSONパケットをデコード
 		//構造上問題がある場合は処理中断
-		if(($messages = json_decode($message, true)) === null) return;
+		if(($messages = json_decode($message, true)) === null){
+			//無効パケット検出処理
+			$this->detectIllegalPacket($from);
+			return;
+		}
 		//リクエストパケットでなかった場合はレスポンスパケットの評価へ
 		if(($type = $this->getJsonValueFromAttr($messages, 'request')) === null) goto __response;
 		switch($type){

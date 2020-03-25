@@ -30,6 +30,9 @@ define('MAX_HOST_ROOM_NUM_SAME_IP', 3);
 // 各ルームの最大接続可能人数
 // (default: 50)
 define('MAX_ROOM_MEMBER_NUM', 50);
+// 同時ホスト可能な最大ルーム数
+// (default: 50)
+define('MAX_ROOM_NUM', 50);
 // 空パスワードのルームの作成を許可するか？
 // (default: false)
 define('ENABLE_NO_PASSWORD_ROOM', false);

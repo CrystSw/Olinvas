@@ -253,6 +253,8 @@ class OlinvasCore implements MessageComponentInterface {
 				if(
 					//パケット送信者はどこのルームにも所属していないか
 					isset($this->userInfoByResId[$from->resourceId]['roomId'])
+					//同時ホストルーム数が上限を超えていないか
+				||	count($roomInfo) >= MAX_ROOM_NUM
 					//パケット送信者がホストしているルーム数が上限を超えていないか
 				||	$this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'] >= MAX_HOST_ROOM_NUM_SAME_IP
 					//ルーム名が空でないか

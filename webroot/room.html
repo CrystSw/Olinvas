@@ -8,8 +8,8 @@
 		<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css"/>
 		<script type="text/javascript" src="js/jquery-3.4.1.min.js"></script>
 		<script type="text/javascript" src="js/bootstrap.min.js"></script>
-		<script type="text/javascript" src="js/common.js?ver=1"></script>
-		<script type="text/javascript" src="js/olinvas.js?ver=1"></script>
+		<script type="text/javascript" src="js/common.js?ver=1.1"></script>
+		<script type="text/javascript" src="js/olinvas.js?ver=1.1"></script>
 	</head>
 	<body class="bg-light">
 		<header class="sticky-top bg-primary text-white mb-2" style="font-size:2rem;">
@@ -98,6 +98,23 @@
 				</div>
 			</div>
 		</div>
+		<div id="server-status" class="card border-info w-50 mx-auto m-2" style="z-index:1000;">
+			<div class="card-header bg-info text-white">
+				ステータス
+			</div>
+			<div class="card-body">
+				サーバのステータス
+				<ul>
+					<li>ホストされているルーム数：<span id="ss_hostroom-num"></span>/<span id="ss_max-hostroom-num"></span></li>
+					<li>ルームの最大参加可能人数：<span id="ss_max-member"></span></li>
+				</ul>
+				あなたのステータス
+				<ul>
+					<li>セッション数：<span id="ss_ysession-num"></span>/<span id="ss_max-ysession-num"></span></li>
+					<li>ホスト中のルーム数：<span id="ss_yhostroom-num"></span>/<span id="ss_max-yhostroom-num"></span></li>
+				</ul>
+			</div>
+		</div>
 		<!--Dialog Main-->
 		<!--Room-close Dialog-->
 		<div id="info_room-close" class="card border-warning w-75 mx-auto fixed-top m-5" style="z-index:1050;" hidden>
@@ -162,7 +179,7 @@
 			</div>
 		</div>
 		<footer class="fixed-bottom bg-primary text-white">
-			Olinvas ver.1.0 (c) 2020 CrystSw
+			Olinvas ver.1.1 (c) 2020 CrystSw
 		</footer>
 	</body>
 </html>

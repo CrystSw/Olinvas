@@ -27,6 +27,7 @@ class OlinvasCore implements MessageComponentInterface {
 			roomHistoryCPRequest(boolean) - CheckPoint要求中か？
 	*/
 	private $roomInfo;
+	private $roomInfoNum = 0;
 	
 	//IPアドレスに起因するユーザ情報
 	/*
@@ -254,7 +255,7 @@ class OlinvasCore implements MessageComponentInterface {
 					//パケット送信者はどこのルームにも所属していないか
 					isset($this->userInfoByResId[$from->resourceId]['roomId'])
 					//同時ホストルーム数が上限を超えていないか
-				||	count($roomInfo) >= MAX_ROOM_NUM
+				||	$this->roomInfoNum >= MAX_ROOM_NUM
 					//パケット送信者がホストしているルーム数が上限を超えていないか
 				||	$this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'] >= MAX_HOST_ROOM_NUM_SAME_IP
 					//ルーム名が空でないか
@@ -271,7 +272,7 @@ class OlinvasCore implements MessageComponentInterface {
 					$GLOBALS['logger']->printLog(LOG_WARNING, "{$type}-Reject: Request from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理
-					$this->detectIllegalPacket($from);
+					//$this->detectIllegalPacket($from);
 					break;
 				}
 				//==================================
@@ -309,6 +310,8 @@ class OlinvasCore implements MessageComponentInterface {
 				++$this->roomInfo[$newRoomId]['roomMemberNum'];
 				//ホストがホストしているルーム数をインクリメント
 				++$this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'];
+				//ルーム情報数をインクリメント
+				++$this->roomInfoNum;
 				
 				/*パケット送信元へ許可応答*/
 				//ルームID, ルーム名, フレンドキーをホストへ通知
@@ -469,6 +472,20 @@ class OlinvasCore implements MessageComponentInterface {
 				$GLOBALS['logger']->printLog(LOG_INFO, "{$type}-Accept: '{$from->remoteAddress}' has become friends with host of 'RoomID: {$this->userInfoByResId[$from->resourceId]['roomId']}'.");
 				break;
 				
+			case 'ServerInfo':
+				$response = json_encode(array(
+					'response' => 'ServerInfo-Echo',
+					'yourSessionNum' => $this->userInfoByIPAddr[$from->remoteAddress]['sessionNum'],
+					'maxSessionNum' => MAX_SESSION_NUM_SAME_IP,
+					'yourHostRoomNum' => $this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'],
+					'maxHostRoomNum' => MAX_HOST_ROOM_NUM_SAME_IP,
+					'maxRoomMemberNum' => MAX_ROOM_MEMBER_NUM,
+					'hostingRoomNum' => $this->roomInfoNum,
+					'maxRoomNum' => MAX_ROOM_NUM
+				));
+				$from->send($response);
+				break;
+				
 			default:
 				//無効パケット検出処理
 				$this->detectIllegalPacket($from);
@@ -614,6 +631,8 @@ __response:
 		}
 		//ルーム情報解放
 		unset($this->roomInfo[$roomId]);
+		//ルーム情報数をデクリメント
+		--$this->roomInfoNum;
 	}
 	
 	/*ルームが存在するか*/

@@ -618,36 +618,24 @@ __response:
 	
 	/*ルームが存在するか*/
 	private function isRoomExist($roomId){
-		if(isset($this->roomInfo[$roomId])){
-			return true;
-		}else{
-			return false;
-		}
+		return (isset($this->roomInfo[$roomId]));
 	}
 	
 	/*ルームのホストかどうか*/
 	//与えられたRoomIDが実在しているかどうかは評価していません．isRoomExistがtrueになるかを検証してからコールしてください．
 	private function isHostMember($roomId, ConnectionInterface $conn){
-		if($this->roomInfo[$roomId]['host']->resourceId === $conn->resourceId){
-			return true;
-		}else{
-			return false;
-		}
+		return ($this->roomInfo[$roomId]['host']->resourceId === $conn->resourceId);
 	}
 	
 	/*フレンドかどうか*/
 	//与えられたRoomIDが実在しているかどうかは評価していません．isRoomExistがtrueになるかを検証してからコールしてください．
 	private function isFriendMember($roomId, ConnectionInterface $conn){
-		if(isset($this->roomInfo[$roomId]['roomFriendMember'][$conn->resourceId])){
-			return true;
-		}else{
-			return false;
-		}
+		return (isset($this->roomInfo[$roomId]['roomFriendMember'][$conn->resourceId]));
 	}
 	
 	/*接続規制されているかどうか*/
 	private function isBanned(ConnectionInterface $conn){
-		if(isset($this->userInfoByIPAddr[$conn->remoteAddress]['isBanned']) && $this->userInfoByIPAddr[$conn->remoteAddress]['isBanned'] === true){
+		if(isset($this->userInfoByIPAddr[$conn->remoteAddress]['isBanned']) && $this->userInfoByIPAddr[$conn->remoteAddress]['isBanned']){
 			/*接続規制解除可能な場合は解除する*/
 			if($this->canUserPardon($conn)){
 				$this->userPardon($conn);
@@ -668,11 +656,7 @@ __response:
 	/*接続規制解除可能かどうか*/
 	//現在のユーザが接続規制されているかどうかは評価していません．isBannedがtrueになるかを検証してからコールしてください．
 	private function canUserPardon(ConnectionInterface $conn){
-		if($this->getPardonTime($conn) <= 0){
-			return true;
-		}else{
-			return false;
-		}
+		return ($this->getPardonTime($conn) <= 0);
 	}
 	
 	/*接続規制処理*/

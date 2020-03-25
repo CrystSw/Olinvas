@@ -76,7 +76,7 @@ class OlinvasCore implements MessageComponentInterface {
 			$this->userInfoByIPAddr[$conn->remoteAddress]['sessionNum'] = 1;
 			//ホストするルーム数の初期化
 			$this->userInfoByIPAddr[$conn->remoteAddress]['hostRoomNum'] = 0;
-		}elseif($this->userInfoByIPAddr[$conn->remoteAddress]['sessionNum'] < MAX_CONNECTION_NUM_SAME_IP){
+		}elseif($this->userInfoByIPAddr[$conn->remoteAddress]['sessionNum'] < MAX_SESSION_NUM_SAME_IP){
 			//二回目以降のセッション
 			//セッションカウントのインクリメント
 			++$this->userInfoByIPAddr[$conn->remoteAddress]['sessionNum'];
@@ -254,7 +254,7 @@ class OlinvasCore implements MessageComponentInterface {
 					//パケット送信者はどこのルームにも所属していないか
 					isset($this->userInfoByResId[$from->resourceId]['roomId'])
 					//パケット送信者がホストしているルーム数が上限を超えていないか
-				||	$this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'] >= MAX_ROOM_NUM_SAME_IP
+				||	$this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'] >= MAX_HOST_ROOM_NUM_SAME_IP
 					//ルーム名が空でないか
 				||	$roomName === ''
 					//空パスワードを禁止している場合，空パスワードではないか

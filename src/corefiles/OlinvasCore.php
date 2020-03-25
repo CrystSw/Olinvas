@@ -27,6 +27,7 @@ class OlinvasCore implements MessageComponentInterface {
 			roomHistoryCPRequest(boolean) - CheckPoint要求中か？
 	*/
 	private $roomInfo;
+	private $roomInfoNum = 0;
 	
 	//IPアドレスに起因するユーザ情報
 	/*
@@ -76,7 +77,7 @@ class OlinvasCore implements MessageComponentInterface {
 			$this->userInfoByIPAddr[$conn->remoteAddress]['sessionNum'] = 1;
 			//ホストするルーム数の初期化
 			$this->userInfoByIPAddr[$conn->remoteAddress]['hostRoomNum'] = 0;
-		}elseif($this->userInfoByIPAddr[$conn->remoteAddress]['sessionNum'] < MAX_CONNECTION_NUM_SAME_IP){
+		}elseif($this->userInfoByIPAddr[$conn->remoteAddress]['sessionNum'] < MAX_SESSION_NUM_SAME_IP){
 			//二回目以降のセッション
 			//セッションカウントのインクリメント
 			++$this->userInfoByIPAddr[$conn->remoteAddress]['sessionNum'];
@@ -253,8 +254,10 @@ class OlinvasCore implements MessageComponentInterface {
 				if(
 					//パケット送信者はどこのルームにも所属していないか
 					isset($this->userInfoByResId[$from->resourceId]['roomId'])
+					//同時ホストルーム数が上限を超えていないか
+				||	$this->roomInfoNum >= MAX_ROOM_NUM
 					//パケット送信者がホストしているルーム数が上限を超えていないか
-				||	$this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'] >= MAX_ROOM_NUM_SAME_IP
+				||	$this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'] >= MAX_HOST_ROOM_NUM_SAME_IP
 					//ルーム名が空でないか
 				||	$roomName === ''
 					//空パスワードを禁止している場合，空パスワードではないか
@@ -269,7 +272,7 @@ class OlinvasCore implements MessageComponentInterface {
 					$GLOBALS['logger']->printLog(LOG_WARNING, "{$type}-Reject: Request from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理
-					$this->detectIllegalPacket($from);
+					//$this->detectIllegalPacket($from);
 					break;
 				}
 				//==================================
@@ -307,6 +310,8 @@ class OlinvasCore implements MessageComponentInterface {
 				++$this->roomInfo[$newRoomId]['roomMemberNum'];
 				//ホストがホストしているルーム数をインクリメント
 				++$this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'];
+				//ルーム情報数をインクリメント
+				++$this->roomInfoNum;
 				
 				/*パケット送信元へ許可応答*/
 				//ルームID, ルーム名, フレンドキーをホストへ通知
@@ -467,6 +472,20 @@ class OlinvasCore implements MessageComponentInterface {
 				$GLOBALS['logger']->printLog(LOG_INFO, "{$type}-Accept: '{$from->remoteAddress}' has become friends with host of 'RoomID: {$this->userInfoByResId[$from->resourceId]['roomId']}'.");
 				break;
 				
+			case 'ServerInfo':
+				$response = json_encode(array(
+					'response' => 'ServerInfo-Echo',
+					'yourSessionNum' => $this->userInfoByIPAddr[$from->remoteAddress]['sessionNum'],
+					'maxSessionNum' => MAX_SESSION_NUM_SAME_IP,
+					'yourHostRoomNum' => $this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'],
+					'maxHostRoomNum' => MAX_HOST_ROOM_NUM_SAME_IP,
+					'maxRoomMemberNum' => MAX_ROOM_MEMBER_NUM,
+					'hostingRoomNum' => $this->roomInfoNum,
+					'maxRoomNum' => MAX_ROOM_NUM
+				));
+				$from->send($response);
+				break;
+				
 			default:
 				//無効パケット検出処理
 				$this->detectIllegalPacket($from);
@@ -612,40 +631,30 @@ __response:
 		}
 		//ルーム情報解放
 		unset($this->roomInfo[$roomId]);
+		//ルーム情報数をデクリメント
+		--$this->roomInfoNum;
 	}
 	
 	/*ルームが存在するか*/
 	private function isRoomExist($roomId){
-		if(isset($this->roomInfo[$roomId])){
-			return true;
-		}else{
-			return false;
-		}
+		return (isset($this->roomInfo[$roomId]));
 	}
 	
 	/*ルームのホストかどうか*/
 	//与えられたRoomIDが実在しているかどうかは評価していません．isRoomExistがtrueになるかを検証してからコールしてください．
 	private function isHostMember($roomId, ConnectionInterface $conn){
-		if($this->roomInfo[$roomId]['host']->resourceId === $conn->resourceId){
-			return true;
-		}else{
-			return false;
-		}
+		return ($this->roomInfo[$roomId]['host']->resourceId === $conn->resourceId);
 	}
 	
 	/*フレンドかどうか*/
 	//与えられたRoomIDが実在しているかどうかは評価していません．isRoomExistがtrueになるかを検証してからコールしてください．
 	private function isFriendMember($roomId, ConnectionInterface $conn){
-		if(isset($this->roomInfo[$roomId]['roomFriendMember'][$conn->resourceId])){
-			return true;
-		}else{
-			return false;
-		}
+		return (isset($this->roomInfo[$roomId]['roomFriendMember'][$conn->resourceId]));
 	}
 	
 	/*接続規制されているかどうか*/
 	private function isBanned(ConnectionInterface $conn){
-		if(isset($this->userInfoByIPAddr[$conn->remoteAddress]['isBanned']) && $this->userInfoByIPAddr[$conn->remoteAddress]['isBanned'] === true){
+		if(isset($this->userInfoByIPAddr[$conn->remoteAddress]['isBanned']) && $this->userInfoByIPAddr[$conn->remoteAddress]['isBanned']){
 			/*接続規制解除可能な場合は解除する*/
 			if($this->canUserPardon($conn)){
 				$this->userPardon($conn);
@@ -666,11 +675,7 @@ __response:
 	/*接続規制解除可能かどうか*/
 	//現在のユーザが接続規制されているかどうかは評価していません．isBannedがtrueになるかを検証してからコールしてください．
 	private function canUserPardon(ConnectionInterface $conn){
-		if($this->getPardonTime($conn) <= 0){
-			return true;
-		}else{
-			return false;
-		}
+		return ($this->getPardonTime($conn) <= 0);
 	}
 	
 	/*接続規制処理*/

@@ -1,8 +1,8 @@
 /*==============================
 Olinvas Client
 --------------------------------
-client ver.1
-protocol ver.1
+client ver.1.1
+protocol ver.1.1
 ==============================*/
 
 /*Global variable*/
@@ -56,6 +56,9 @@ var serverPort = 3181;
 			
 			//room master renderer
 			$('#room_manager').fadeIn('fast');
+			
+			//get status
+			$(this).olinvas_client('serverInfo');
 		},
 		
 		onMessage : function(event){
@@ -185,6 +188,16 @@ var serverPort = 3181;
 					$('#pardon-time').text(Math.ceil(responses['pardonTime']/60));
 					$('#info_client-ban').fadeIn('fast');
 					break;
+					
+				case 'ServerInfo-Echo':
+					$('#ss_hostroom-num').text(responses['hostingRoomNum']);
+					$('#ss_max-hostroom-num').text(responses['maxRoomNum']);
+					$('#ss_max-member').text(responses['maxRoomMemberNum']);
+					$('#ss_ysession-num').text(responses['yourSessionNum']);
+					$('#ss_max-ysession-num').text(responses['maxSessionNum']);
+					$('#ss_yhostroom-num').text(responses['yourHostRoomNum']);
+					$('#ss_max-yhostroom-num').text(responses['maxHostRoomNum']);
+					break;
 				
 				default:
 					break;
@@ -283,6 +296,15 @@ var serverPort = 3181;
 		
 		changeLineWidth : function(widthId){
 			lineWidthId = widthId;
+		},
+		
+		serverInfo : function(){
+			var request = JSON.stringify(
+				{
+					request: "ServerInfo"
+				}
+			);
+			info['conn'].send(request);
 		}
 	};
 	
@@ -298,6 +320,7 @@ var serverPort = 3181;
 	function roomInit(){
 		//canvas renderer
 		$('#room_manager').fadeOut('fast');
+		$('#server-status').fadeOut('fast');
 		$('#main').fadeIn('fast');
 		
 		$('#room-name').append(sanitize(info['roomName']));

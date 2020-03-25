@@ -23,13 +23,16 @@ define('LISTEN_PORT', 3181);
 //[一般]
 // 同一IPアドレスからの最大同時接続数
 // (default: 5)
-define('MAX_CONNECTION_NUM_SAME_IP', 5);
+define('MAX_SESSION_NUM_SAME_IP', 5);
 // 同一IPアドレスによる最大作成可能ルーム数
 // (default: 3)
-define('MAX_ROOM_NUM_SAME_IP', 3);
+define('MAX_HOST_ROOM_NUM_SAME_IP', 3);
 // 各ルームの最大接続可能人数
 // (default: 50)
 define('MAX_ROOM_MEMBER_NUM', 50);
+// 同時ホスト可能な最大ルーム数
+// (default: 50)
+define('MAX_ROOM_NUM', 50);
 // 空パスワードのルームの作成を許可するか？
 // (default: false)
 define('ENABLE_NO_PASSWORD_ROOM', false);

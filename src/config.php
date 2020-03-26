@@ -13,12 +13,12 @@ require_once __DIR__.'/corefiles/OlinvasLoadManager.php';
 
 //[Listen]
 // ListenするIPv4アドレス
-// (default: 127.0.0.1)
-define('LISTEN_ADDRESS', '127.0.0.1');
+// (default: 0.0.0.0)
+define('LISTEN_ADDRESS', '0.0.0.0');
 // Listenするポート番号
 // (変更した場合，/webroot/js/olinvas.js内の変数"serverPort"の値を同じものに変更してください)
-// (default: 3181)
-define('LISTEN_PORT', 3181);
+// (default: 13181)
+define('LISTEN_PORT', 13181);
 
 //[一般]
 // 同一IPアドレスからの最大同時接続数

@@ -6,7 +6,7 @@ protocol ver.1.1
 ==============================*/
 
 /*Global variable*/
-var serverPort = 3181;
+var serverPort = 13181;
 
 /*Websocket*/
 (function($){

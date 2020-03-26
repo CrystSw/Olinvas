@@ -1,7 +1,7 @@
 /*==============================
 Olinvas Client
 --------------------------------
-client ver.1.1.1
+client ver.1.1.2
 protocol ver.1.1
 ==============================*/
 
@@ -85,6 +85,8 @@ var serverPort = 13181;
 				case 'ReleaseRoom-Echo':
 					lockScreen('lock_room-close');
 					$('#info_room-close').fadeIn('fast');
+					
+					isEditable = false;
 					break;
 				
 				case 'JoinRoom-Accept':
@@ -179,6 +181,8 @@ var serverPort = 13181;
 					
 					lockScreen('lock_too-connection');
 					$('#info_too-connection').fadeIn('fast');
+					
+					isEditable = false;
 					break;
 					
 				case 'ConnectionBan-Echo':
@@ -187,6 +191,8 @@ var serverPort = 13181;
 					lockScreen('lock_connection-ban');
 					$('#pardon-time').text(Math.ceil(responses['pardonTime']/60));
 					$('#info_client-ban').fadeIn('fast');
+					
+					isEditable = false;
 					break;
 					
 				case 'ServerInfo-Echo':
@@ -226,12 +232,16 @@ var serverPort = 13181;
 				lockScreen('lock_server-access');
 				$('#info_connection-reset').fadeIn('fast');
 			}
+			
+			isEditable = false;
 		},
 		
 		onError : function(event){
 			//error renderer
 			lockScreen('lock_server-access');
 			$('#info_server-error').fadeIn('fast');
+			
+			isEditable = false;
 		},
 		
 		createRoom : function(roomName, roomPassword){

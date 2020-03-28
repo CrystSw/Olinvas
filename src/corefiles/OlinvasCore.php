@@ -96,7 +96,7 @@ class OlinvasCore implements MessageComponentInterface {
 		//コネクションリストへの登録
 		$this->userInfoByIPAddr[$conn->remoteAddress]['connectionList'][$conn->resourceId] = $conn;
 		//ログ
-		$GLOBALS['logger']->printLog(LOG_INFO, "Connected: '{$conn->remoteAddress}' (ResourceID: {$conn->resourceId})");
+		$GLOBALS['logger']->printLog(LOG_INFO, "Connected: '{$conn->remoteAddress}' has connected.");
 	}
 
 	/*パケットの受信*/
@@ -247,7 +247,7 @@ class OlinvasCore implements MessageComponentInterface {
 				)
 				{
 					//ログ出力
-					$GLOBALS['logger']->printLog(LOG_WARNING, "{$type}-Reject: Request from '{$from->remoteAddress}'.");
+					$GLOBALS['logger']->printLog(LOG_WARNING, "CreateRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
 					//CreateRoomは認証ではないので，構造が適切であれば無効パケットでも許す
 					//無効パケット検出処理
@@ -274,7 +274,7 @@ class OlinvasCore implements MessageComponentInterface {
 					$from->send($response);
 					
 					//ログ出力
-					$GLOBALS['logger']->printLog(LOG_WARNING, "{$type}-Reject: Request from '{$from->remoteAddress}'.");
+					$GLOBALS['logger']->printLog(LOG_WARNING, "CreateRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理
 					//$this->detectIllegalPacket($from);
@@ -330,7 +330,7 @@ class OlinvasCore implements MessageComponentInterface {
 				$from->send($response);
 				
 				//ログ出力
-				$GLOBALS['logger']->printLog(LOG_INFO, "{$type}-Accept: '{$from->remoteAddress}' has created room. ('RoomID: {$newRoomId}').");
+				$GLOBALS['logger']->printLog(LOG_INFO, "CreateRoom-Accept: '{$from->remoteAddress}' has created a room-{$newRoomId}.");
 				break;
 				
 			case 'JoinRoom':
@@ -351,7 +351,7 @@ class OlinvasCore implements MessageComponentInterface {
 				)
 				{
 					//ログ出力
-					$GLOBALS['logger']->printLog(LOG_WARNING, "{$type}-Reject: Request from '{$from->remoteAddress}'.");
+					$GLOBALS['logger']->printLog(LOG_WARNING, "JoinRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理
 					$this->detectIllegalPacket($from);
@@ -375,7 +375,7 @@ class OlinvasCore implements MessageComponentInterface {
 					$from->send($response);
 					
 					//ログ出力
-					$GLOBALS['logger']->printLog(LOG_WARNING, "{$type}-Reject: Request from '{$from->remoteAddress}'.");
+					$GLOBALS['logger']->printLog(LOG_WARNING, "JoinRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理
 					$this->detectIllegalPacket($from);
@@ -416,7 +416,7 @@ class OlinvasCore implements MessageComponentInterface {
 				}
 				
 				//ログ出力
-				$GLOBALS['logger']->printLog(LOG_INFO, "{$type}-Accept: '{$from->remoteAddress}' has joined in 'RoomID: {$roomId}'.");
+				$GLOBALS['logger']->printLog(LOG_INFO, "JoinRoom-Accept: '{$from->remoteAddress}' has joined a room-{$roomId}.");
 				break;
 				
 			case 'FriendAuth':
@@ -436,7 +436,7 @@ class OlinvasCore implements MessageComponentInterface {
 				)
 				{
 					//ログ出力
-					$GLOBALS['logger']->printLog(LOG_WARNING, "{$type}-Reject: Request from '{$from->remoteAddress}'.");
+					$GLOBALS['logger']->printLog(LOG_WARNING, "FriendAuth-Reject: Request from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理
 					$this->detectIllegalPacket($from);
@@ -458,7 +458,7 @@ class OlinvasCore implements MessageComponentInterface {
 					$from->send($response);
 					
 					//ログ出力
-					$GLOBALS['logger']->printLog(LOG_WARNING, "{$type}-Reject: Request from '{$from->remoteAddress}'.");
+					$GLOBALS['logger']->printLog(LOG_WARNING, "FriendAuth-Reject: Request from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理
 					$this->detectIllegalPacket($from);
@@ -475,7 +475,7 @@ class OlinvasCore implements MessageComponentInterface {
 				$from->send($response);
 				
 				//ログ出力
-				$GLOBALS['logger']->printLog(LOG_INFO, "{$type}-Accept: '{$from->remoteAddress}' has become friends with host of 'RoomID: {$this->userInfoByResId[$from->resourceId]['roomId']}'.");
+				$GLOBALS['logger']->printLog(LOG_INFO, "FriendAuth-Accept: '{$from->remoteAddress}' has become friends with host of room-{$roomId}.");
 				break;
 				
 			case 'ServerInfo':
@@ -523,7 +523,7 @@ __response:
 				)
 				{
 					//ログ出力
-					$GLOBALS['logger']->printLog(LOG_INFO, "{$type}: Unknown echo from '{$from->remoteAddress}'.");
+					$GLOBALS['logger']->printLog(LOG_INFO, "CheckPoint-Echo: Unknown echo from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理
 					$this->detectIllegalPacket($from);
@@ -541,7 +541,7 @@ __response:
 				)
 				{
 					//ログ出力
-					$GLOBALS['logger']->printLog(LOG_INFO, "{$type}: Unknown echo from '{$from->remoteAddress}'.");
+					$GLOBALS['logger']->printLog(LOG_INFO, "CheckPoint-Echo: Unknown echo from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理
 					$this->detectIllegalPacket($from);
@@ -569,7 +569,7 @@ __response:
 				$this->roomInfo[$roomId]['roomTmpHistory'] = [];
 				
 				//ログ出力
-				$GLOBALS['logger']->printLog(LOG_INFO, "{$type}: The checkpoint of 'RoomID: {$this->userInfoByResId[$from->resourceId]['roomId']}' has updated.");
+				$GLOBALS['logger']->printLog(LOG_INFO, "CheckPoint-Echo: The checkpoint of room has updated. ('RoomID: {$roomId}')");
 				break;
 				
 			default:
@@ -582,7 +582,7 @@ __response:
 	/*セッションの解放*/
 	public function onClose(ConnectionInterface $conn){
 		//ログ出力
-		$GLOBALS['logger']->printLog(LOG_INFO, "Disconnected: '{$conn->remoteAddress}' (ResourceID: {$conn->resourceId})");
+		$GLOBALS['logger']->printLog(LOG_INFO, "Disconnected: '{$conn->remoteAddress}' has disconnected.");
 		//どこかのルームに参加しているか
 		if(isset($this->userInfoByResId[$conn->resourceId]['roomId'])){
 			$roomId = $this->userInfoByResId[$conn->resourceId]['roomId'];

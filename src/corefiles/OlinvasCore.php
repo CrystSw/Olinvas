@@ -23,6 +23,7 @@ class OlinvasCore implements MessageComponentInterface {
 			roomMemberNum(integer) - ルームメンバ数
 			roomHistory(string-list) - History
 			roomHistoryNum(integer) - History数
+			roomTmpHistory(string-list) - 仮History
 			roomHistoryCheckPoint(string) - HistoryのCheckPointデータ(Base64画像)
 			roomHistoryCPRequest(boolean) - CheckPoint要求中か？
 	*/
@@ -143,8 +144,6 @@ class OlinvasCore implements MessageComponentInterface {
 					($roomId = $this->getRoomIdFromConn($from)) === null
 					//フレンド権限を持っているか
 				||	!$this->isFriendMember($roomId, $from)
-					//CheckPoint要求の送信中ではないか(同期のため)
-				||	$this->roomInfo[$roomId]['roomHistoryCPRequest']
 				)
 				{
 					//無効パケット検出処理
@@ -165,8 +164,14 @@ class OlinvasCore implements MessageComponentInterface {
 				));
 				
 				/*Historyの更新*/
-				$this->roomInfo[$roomId]['roomHistory'][] = $response;
-				++$this->roomInfo[$roomId]['roomHistoryNum'];
+				if(!$this->roomInfo[$roomId]['roomHistoryCPRequest']){
+					$this->roomInfo[$roomId]['roomHistory'][] = $response;
+					++$this->roomInfo[$roomId]['roomHistoryNum'];
+				}else{
+					//CheckPoint要求中は仮Historyに登録
+					$this->roomInfo[$roomId]['roomTmpHistory'][] = $response;
+					return;
+				}
 				
 				/*描画パケットをルームメンバ全員へ送信*/
 				foreach((array)$this->roomInfo[$roomId]['roomMember'] as &$member){
@@ -294,6 +299,7 @@ class OlinvasCore implements MessageComponentInterface {
 					'roomMemberNum' => 0,	//ルームメンバ数
 					'roomHistory' => [],	//History
 					'roomHistoryNum' => 0,	//History数
+					'roomTmpHistory' => [],	//仮History
 					'roomHistoryCheckPoint' => null,	//HistoryのCheckPointデータ(Base64画像)
 					'roomHistoryCPRequest' => false	//CheckPoint要求中か？
 				);
@@ -551,6 +557,16 @@ __response:
 				$this->roomInfo[$roomId]['roomHistoryNum'] = 0;
 				//CheckPoint要求解除
 				$this->roomInfo[$roomId]['roomHistoryCPRequest'] = false;
+				
+				/*仮Historyをルームメンバ全員へ送信*/
+				foreach((array)$this->roomInfo[$roomId]['roomTmpHistory'] as &$history){
+					foreach((array)$this->roomInfo[$roomId]['roomMember'] as &$member){
+						$member->send($history);
+					}
+				}
+				
+				//仮Historyリセット
+				$this->roomInfo[$roomId]['roomTmpHistory'] = [];
 				
 				//ログ出力
 				$GLOBALS['logger']->printLog(LOG_INFO, "{$type}: The checkpoint of 'RoomID: {$this->userInfoByResId[$from->resourceId]['roomId']}' has updated.");

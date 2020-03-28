@@ -569,7 +569,7 @@ __response:
 				$this->roomInfo[$roomId]['roomTmpHistory'] = [];
 				
 				//ログ出力
-				$GLOBALS['logger']->printLog(LOG_INFO, "CheckPoint-Echo: The checkpoint of room has updated. ('RoomID: {$roomId}')");
+				$GLOBALS['logger']->printLog(LOG_INFO, "CheckPoint-Echo: The checkpoint of room-{$roomId} has updated.");
 				break;
 				
 			default:
@@ -595,7 +595,7 @@ __response:
 					//ルーム解放
 					$this->releaseRoom($roomId);
 					//ログ出力
-					$GLOBALS['logger']->printLog(LOG_INFO, "ReleaseRoom-Echo: Room closed. ('ID: {$roomId}').");
+					$GLOBALS['logger']->printLog(LOG_INFO, "ReleaseRoom-Echo: The room-{$roomId} has closed.");
 				}else{
 					/*メンバ*/
 					//ルームメンバから抜ける

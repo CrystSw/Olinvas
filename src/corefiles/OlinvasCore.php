@@ -124,15 +124,9 @@ class OlinvasCore implements MessageComponentInterface {
 				//==================================
 				// リクエスト解析
 				// パラメータ欠損，もしくは，値がスカラー値でない場合は破棄
-				if(
-					($prevX = $this->getJsonValueFromAttr($messages, 'prevX')) === null
-				||	($prevY = $this->getJsonValueFromAttr($messages, 'prevY')) === null
-				||	($nextX = $this->getJsonValueFromAttr($messages, 'nextX')) === null
-				||	($nextY = $this->getJsonValueFromAttr($messages, 'nextY')) === null
-				||	($color = $this->getJsonValueFromAttr($messages, 'color')) === null
-				||	($width = $this->getJsonValueFromAttr($messages, 'width')) === null
-				)
-				{
+				try{
+					list($prevX, $prevY, $nextX, $nextY, $color, $width) = $this->getParameters($messages, 'prevX', 'prevY', 'nextX', 'nextY', 'color', 'width');
+				}catch(\Exception $e){
 					//無効パケット検出処理
 					$this->detectIllegalPacket($from);
 					break;
@@ -241,11 +235,9 @@ class OlinvasCore implements MessageComponentInterface {
 				//==================================
 				// リクエスト解析
 				// パラメータ欠損，もしくは，値がスカラー値でない場合は破棄
-				if(
-					($roomName = $this->getJsonValueFromAttr($messages, 'roomName')) === null
-				||	($roomPassword = $this->getJsonValueFromAttr($messages, 'roomPassword')) === null
-				)
-				{
+				try{
+					list($roomName, $roomPassword) = $this->getParameters($messages, 'roomName', 'roomPassword');
+				}catch(\Exception $e){
 					//ログ出力
 					$GLOBALS['logger']->printLog(LOG_WARNING, "CreateRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
@@ -345,11 +337,9 @@ class OlinvasCore implements MessageComponentInterface {
 				//==================================
 				// リクエスト解析
 				// パラメータ欠損，もしくは，値がスカラー値でない場合は破棄
-				if(
-					($roomId = $this->getJsonValueFromAttr($messages, 'roomId')) === null
-				||	($roomPassword = $this->getJsonValueFromAttr($messages, 'roomPassword')) === null
-				)
-				{
+				try{
+					list($roomId, $roomPassword) = $this->getParameters($messages, 'roomId', 'roomPassword');
+				}catch(\Exception $e){
 					//ログ出力
 					$GLOBALS['logger']->printLog(LOG_WARNING, "JoinRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
@@ -431,10 +421,9 @@ class OlinvasCore implements MessageComponentInterface {
 				//==================================
 				// リクエスト解析
 				// パラメータ欠損，もしくは，値がスカラー値でない場合は破棄
-				if(
-					($roomFriendKey = $this->getJsonValueFromAttr($messages, 'roomFriendKey')) === null
-				)
-				{
+				try{
+					list($roomFriendKey) = $this->getParameters($messages, 'roomFriendKey');
+				}catch(\Exception $e){
 					//ログ出力
 					$GLOBALS['logger']->printLog(LOG_WARNING, "FriendAuth-Reject: Request from '{$from->remoteAddress}'.");
 					
@@ -518,10 +507,9 @@ __response:
 				//==================================
 				// リクエスト解析
 				// パラメータ欠損，もしくは，値がスカラー値でない場合は破棄
-				if(
-					($canvasInfo = $this->getJsonValueFromAttr($messages, 'canvasInfo')) === null
-				)
-				{
+				try{
+					list($canvasInfo) = $this->getParameters($messages, 'canvasInfo');
+				}catch(\Exception $e){
 					//ログ出力
 					$GLOBALS['logger']->printLog(LOG_INFO, "CheckPoint-Echo: Unknown echo from '{$from->remoteAddress}'.");
 					
@@ -615,6 +603,22 @@ __response:
 	public function onError(ConnectionInterface $conn, \Exception $e){
 		$GLOBALS['logger']->printLog(LOG_ERR, "ServerError: {$e->getMessage()}");
 		$conn->close();
+	}
+	
+	/*引数チェック*/
+	//json配列, <パラメータ>
+	private function getParameters(){
+		$result = [];
+		
+		$args = func_get_args();
+		$argsNum = func_num_args();
+		for($i = 1; $i < $argsNum; ++$i){
+			if(($result[] = $this->getJsonValueFromAttr($args[0], $args[$i])) === null){
+				throw new \Exception();
+			}
+		}
+		
+		return $result;
 	}
 	
 	/*Json文字列から値を取得*/

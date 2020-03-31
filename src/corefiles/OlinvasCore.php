@@ -2,6 +2,7 @@
 namespace Olinvas;
 use Ratchet\MessageComponentInterface;
 use Ratchet\ConnectionInterface;
+use Olinvas\RoomInfo;
  
 class OlinvasCore implements MessageComponentInterface {
 	/*======================================================
@@ -13,20 +14,6 @@ class OlinvasCore implements MessageComponentInterface {
 	*/
 	
 	//ルーム情報
-	/*
-		<roomId>(string) - ルームID
-		map =>
-			host(conn) - ルームホストのコネクション
-			roomName(string) - ルーム名
-			roomPassword(string) - ルームパスワード
-			roomFriendKey(string) - フレンドキー
-			roomMemberNum(integer) - ルームメンバ数
-			roomHistory(string-list) - History
-			roomHistoryNum(integer) - History数
-			roomTmpHistory(string-list) - 仮History
-			roomHistoryCheckPoint(string) - HistoryのCheckPointデータ(Base64画像)
-			roomHistoryCPRequest(boolean) - CheckPoint要求中か？
-	*/
 	private $roomInfo;
 	private $roomInfoNum = 0;
 	
@@ -58,7 +45,10 @@ class OlinvasCore implements MessageComponentInterface {
 	メソッド
 	======================================================*/
 	/*コンストラクタ*/
-	public function __construct(){}
+	public function __construct(){
+		$this->roomInfo = [];
+		$this->roomInfoNum = 0;
+	}
  
 	/*セッションの確立*/
 	public function onOpen(ConnectionInterface $conn){
@@ -137,7 +127,7 @@ class OlinvasCore implements MessageComponentInterface {
 					//パケット送信者はどこかのルームに所属しているか
 					($roomId = $this->getRoomIdFromConn($from)) === null
 					//フレンド権限を持っているか
-				||	!$this->isFriendMember($roomId, $from)
+				||	!$this->roomInfo[$roomId]->isFriendMember($from)
 				)
 				{
 					//無効パケット検出処理
@@ -158,26 +148,25 @@ class OlinvasCore implements MessageComponentInterface {
 				));
 				
 				/*Historyの更新*/
-				if(!$this->roomInfo[$roomId]['roomHistoryCPRequest']){
-					$this->roomInfo[$roomId]['roomHistory'][] = $response;
-					++$this->roomInfo[$roomId]['roomHistoryNum'];
+				if(!$this->roomInfo[$roomId]->isCheckPointRequest()){
+					$this->roomInfo[$roomId]->registHistory($response);
 				}else{
 					//CheckPoint要求中は仮Historyに登録
-					$this->roomInfo[$roomId]['roomTmpHistory'][] = $response;
+					$this->roomInfo[$roomId]->registTmpHistory($response);
 					return;
 				}
 				
 				/*描画パケットをルームメンバ全員へ送信*/
-				foreach((array)$this->roomInfo[$roomId]['roomMember'] as &$member){
+				foreach((array)$this->roomInfo[$roomId]->getMember() as &$member){
 					$member->send($response);
 				}
 				
 				//History件数がコンフィグで指定した最大件数を超えた場合，ホストに対して現状のキャンバスを画像データとして送信してもらう(メモリ節約)
-				if($this->roomInfo[$roomId]['roomHistoryNum']+1 >= MAX_HISTORY_NUM){
+				if($this->roomInfo[$roomId]->getHistoryNum() > MAX_HISTORY_NUM){
 					//CheckPoint要求をホストへ送信
-					$this->roomInfo[$roomId]['roomHistoryCPRequest'] = true;
+					$this->roomInfo[$roomId]->setCheckPointRequest(true);
 					$request = json_encode(array('request' => 'CheckPoint'));
-					$this->roomInfo[$roomId]['host']->send($request);
+					$this->roomInfo[$roomId]->getHost()->send($request);
 				}
 				break;
 				
@@ -196,7 +185,7 @@ class OlinvasCore implements MessageComponentInterface {
 					//パケット送信者はどこかのルームに所属しているか
 					($roomId = $this->getRoomIdFromConn($from)) === null
 					//パケット送信者はホストか
-				||	!$this->isHostMember($roomId, $from)
+				||	!$this->roomInfo[$roomId]->isHostMember($from)
 				)
 				{
 					//無効パケット検出処理
@@ -208,16 +197,15 @@ class OlinvasCore implements MessageComponentInterface {
 				
 				/*Historyの更新*/
 				//CheckPointの更新
-				$this->roomInfo[$roomId]['roomHistoryCheckPoint'] = '';
+				$this->roomInfo[$roomId]->setCheckPoint(null);
 				//Historyリセット
-				$this->roomInfo[$roomId]['roomHistory'] = [];
-				$this->roomInfo[$roomId]['roomHistoryNum'] = 0;
+				$this->roomInfo[$roomId]->resetHistory();
 				
 				/*パケットをルームメンバ全員へ送信*/
 				$response = json_encode(array(
 					'response' => 'ClearBoard-Echo'
 				));
-				foreach((array)$this->roomInfo[$roomId]['roomMember'] as &$member){
+				foreach((array)$this->roomInfo[$roomId]->getMember() as &$member){
 					$member->send($response);
 				}
 				
@@ -283,29 +271,14 @@ class OlinvasCore implements MessageComponentInterface {
 				}while(isset($this->roomIndo[$newRoomId]));
 				
 				/*ルーム情報の初期化*/
-				$this->roomInfo[$newRoomId] = array(
-					'host' => $from,	//ルームホストのコネクション
-					'roomName' => $roomName,	//ルーム名
-					'roomPassword' => $roomPassword,	//ルームパスワード
-					'roomFriendKey' => base64_encode(openssl_random_pseudo_bytes(6)),	//フレンドキー
-					'roomMemberNum' => 0,	//ルームメンバ数
-					'roomHistory' => [],	//History
-					'roomHistoryNum' => 0,	//History数
-					'roomTmpHistory' => [],	//仮History
-					'roomHistoryCheckPoint' => null,	//HistoryのCheckPointデータ(Base64画像)
-					'roomHistoryCPRequest' => false	//CheckPoint要求中か？
-				);
-				//ルームメンバにホストを追加
-				$this->roomInfo[$newRoomId]['roomMember'][] = $from;
-				//ホストのルームメンバIDを登録(ルーム退室時に利用)
-				$this->roomInfo[$newRoomId]['roomMemberId'][$from->resourceId][] = $this->roomInfo[$newRoomId]['roomMemberNum'];
+				$this->roomInfo[$newRoomId] = new RoomInfo($from, $roomName, $roomPassword);
+				//メンバ情報の登録
+				$this->roomInfo[$newRoomId]->registMember($from);
 				//ホストをフレンドメンバに追加
-				$this->roomInfo[$newRoomId]['roomFriendMember'][$from->resourceId] = true;
+				$this->roomInfo[$newRoomId]->registFriendMember($from);
 				//コネクションとルームIDを紐づけ
 				//(コネクションのリソースIDから，パケットがどのルームに対して発行された物か特定できるようにする)
 				$this->userInfoByResId[$from->resourceId]['roomId'] = $newRoomId;
-				//ルームメンバ数のインクリメント
-				++$this->roomInfo[$newRoomId]['roomMemberNum'];
 				//ホストがホストしているルーム数をインクリメント
 				++$this->userInfoByIPAddr[$from->remoteAddress]['hostRoomNum'];
 				//ルーム情報数をインクリメント
@@ -316,8 +289,8 @@ class OlinvasCore implements MessageComponentInterface {
 				$response = json_encode(array(
 					'response' => 'CreateRoom-Accept',
 					'roomId' => $newRoomId,
-					'roomName' => $this->roomInfo[$newRoomId]['roomName'],
-					'roomFriendKey' => $this->roomInfo[$newRoomId]['roomFriendKey']
+					'roomName' => $this->roomInfo[$newRoomId]->getName(),
+					'roomFriendKey' => $this->roomInfo[$newRoomId]->getFriendKey()
 				));
 				$from->send($response);
 				
@@ -355,9 +328,9 @@ class OlinvasCore implements MessageComponentInterface {
 					//ルームが存在しているか
 				||	!$this->isRoomExist($roomId)
 					//ルームの参加人数が上限を超えていないか
-				||	count($this->roomInfo[$roomId]['roomMember']) >= MAX_ROOM_MEMBER_NUM
+				||	$this->roomInfo[$roomId]->getMemberNum() >= MAX_ROOM_MEMBER_NUM
 					//ルームのパスワードが誤っていないか
-				||	$roomPassword !== $this->roomInfo[$roomId]['roomPassword']
+				||	$roomPassword !== $this->roomInfo[$roomId]->getPassword()
 				)
 				{
 					/*パケット送信元へ拒否応答*/
@@ -375,33 +348,29 @@ class OlinvasCore implements MessageComponentInterface {
 				// 処理部
 				
 				/*ルーム情報の更新*/
-				//ルームメンバにゲストを追加
-				$this->roomInfo[$roomId]['roomMember'][] = $from;
-				//ゲストのルームメンバIDを登録
-				$this->roomInfo[$roomId]['roomMemberId'][$from->resourceId] = $this->roomInfo[$roomId]['roomMemberNum'];
+				//メンバ情報の登録
+				$this->roomInfo[$roomId]->registMember($from);
 				//コネクションとルームIDを紐づけ
 				$this->userInfoByResId[$from->resourceId]['roomId'] = $roomId;
-				//ルームメンバ数のインクリメント
-				++$this->roomInfo[$roomId]['roomMemberNum'];
 				
 				/*パケット送信元へ許可応答*/
 				$responseQuery = json_encode(array(
 					'response' => 'JoinRoom-Accept',
-					'roomName' => $this->roomInfo[$roomId]['roomName']
+					'roomName' => $this->roomInfo[$roomId]->getName()
 				));
 				$from->send($responseQuery);
 				
 				/*途中参加時用処理*/
 				/*パケット送信元へCheckPointデータを送信*/
-				if($this->roomInfo[$roomId]['roomHistoryCheckPoint'] !== null){
+				if($this->roomInfo[$roomId]->getCheckPoint() !== null){
 					$responseHistory = json_encode(array(
 						'response' => 'DrawBase-Echo',
-						'canvasInfo' => $this->roomInfo[$roomId]['roomHistoryCheckPoint']
+						'canvasInfo' => $this->roomInfo[$roomId]->getCheckPoint()
 					));
 					$from->send($responseHistory);
 				}
 				/*パケット送信元へHistoryを送信*/
-				foreach((array)$this->roomInfo[$roomId]['roomHistory'] as &$history){
+				foreach((array)$this->roomInfo[$roomId]->getHistory() as &$history){
 					$from->send($history);
 				}
 				
@@ -437,9 +406,9 @@ class OlinvasCore implements MessageComponentInterface {
 					//パケット送信者はどこかのルームに所属しているか
 					($roomId = $this->getRoomIdFromConn($from)) === null
 					//既にフレンド権限を持っていないか
-				||	$this->isFriendMember($roomId, $from)
+				||	$this->roomInfo[$roomId]->isFriendMember($from)
 					//フレンドキーが誤っていないか
-				||	$roomFriendKey !== $this->roomInfo[$roomId]['roomFriendKey']
+				||	$roomFriendKey !== $this->roomInfo[$roomId]->getFriendKey()
 				)
 				{
 					/*パケット送信元へ拒否応答*/
@@ -455,9 +424,8 @@ class OlinvasCore implements MessageComponentInterface {
 				}
 				//==================================
 				
-				//フレンドフラグを建てる
-				//(もう少しスマートにやりたい)
-				$this->roomInfo[$roomId]['roomFriendMember'][$from->resourceId] = true;
+				//フレンドメンバへ登録
+				$this->roomInfo[$roomId]->registFriendMember($from);
 				
 				/*パケット送信元へ許可応答*/
 				$response = json_encode(array('response' => 'FriendAuth-Accept'));
@@ -523,9 +491,9 @@ __response:
 					//パケット送信者はどこかのルームに所属しているか
 					($roomId = $this->getRoomIdFromConn($from)) === null
 					//パケット送信者はホストか
-				||	!$this->isHostMember($roomId, $from)
+				||	!$this->roomInfo[$roomId]->isHostMember($from)
 					//CheckPoint要求中か
-				||	!$this->roomInfo[$roomId]['roomHistoryCPRequest']
+				||	!$this->roomInfo[$roomId]->isCheckPointRequest()
 				)
 				{
 					//ログ出力
@@ -539,22 +507,21 @@ __response:
 				
 				/*Historyの更新*/
 				//CheckPointの更新
-				$this->roomInfo[$roomId]['roomHistoryCheckPoint'] = $canvasInfo;
+				$this->roomInfo[$roomId]->setCheckPoint($canvasInfo);
 				//Historyリセット
-				$this->roomInfo[$roomId]['roomHistory'] = [];
-				$this->roomInfo[$roomId]['roomHistoryNum'] = 0;
+				$this->roomInfo[$roomId]->resetHistory();
 				//CheckPoint要求解除
-				$this->roomInfo[$roomId]['roomHistoryCPRequest'] = false;
+				$this->roomInfo[$roomId]->setCheckPointRequest(false);
 				
 				/*仮Historyをルームメンバ全員へ送信*/
-				foreach((array)$this->roomInfo[$roomId]['roomTmpHistory'] as &$history){
-					foreach((array)$this->roomInfo[$roomId]['roomMember'] as &$member){
+				foreach((array)$this->roomInfo[$roomId]->getTmpHistory() as &$history){
+					foreach((array)$this->roomInfo[$roomId]->getMember() as &$member){
 						$member->send($history);
 					}
 				}
 				
 				//仮Historyリセット
-				$this->roomInfo[$roomId]['roomTmpHistory'] = [];
+				$this->roomInfo[$roomId]->resetTmpHistory();
 				
 				//ログ出力
 				$GLOBALS['logger']->printLog(LOG_INFO, "CheckPoint-Echo: The checkpoint of room-{$roomId} has updated.");
@@ -576,7 +543,7 @@ __response:
 			$roomId = $this->userInfoByResId[$conn->resourceId]['roomId'];
 			//そのルームは存在するか(このif文不要かも)
 			if(isset($this->roomInfo[$roomId])){
-				if($this->roomInfo[$roomId]['host']->resourceId === $conn->resourceId){
+				if($this->roomInfo[$roomId]->getHost()->resourceId === $conn->resourceId){
 					/*ホスト*/
 					//ホストがホストしているルーム数をデクリメント
 					--$this->userInfoByIPAddr[$conn->remoteAddress]['hostRoomNum'];
@@ -587,7 +554,7 @@ __response:
 				}else{
 					/*メンバ*/
 					//ルームメンバから抜ける
-					unset($this->roomInfo[$roomId]['roomMember'][$this->roomInfo[$roomId]['roomMemberId'][$conn->resourceId]]);
+					$this->roomInfo[$roomId]->unregistMember($conn);
 				}
 			}
 			//コネクションとルームIDの紐づけ解除
@@ -645,7 +612,7 @@ __response:
 	private function releaseRoom($roomId){
 		/*ルームメンバ全員にルーム解放通知を送信*/
 		$response = json_encode(array('response' => 'ReleaseRoom-Echo'));
-		foreach((array)$this->roomInfo[$roomId]['roomMember'] as &$member){
+		foreach((array)$this->roomInfo[$roomId]->getMember() as &$member){
 			unset($this->userInfoByResId[$member->resourceId]['roomId']);
 			$member->send($response);
 		}
@@ -658,18 +625,6 @@ __response:
 	/*ルームが存在するか*/
 	private function isRoomExist($roomId){
 		return (isset($this->roomInfo[$roomId]));
-	}
-	
-	/*ルームのホストかどうか*/
-	//与えられたRoomIDが実在しているかどうかは評価していません．isRoomExistがtrueになるかを検証してからコールしてください．
-	private function isHostMember($roomId, ConnectionInterface $conn){
-		return ($this->roomInfo[$roomId]['host']->resourceId === $conn->resourceId);
-	}
-	
-	/*フレンドかどうか*/
-	//与えられたRoomIDが実在しているかどうかは評価していません．isRoomExistがtrueになるかを検証してからコールしてください．
-	private function isFriendMember($roomId, ConnectionInterface $conn){
-		return (isset($this->roomInfo[$roomId]['roomFriendMember'][$conn->resourceId]));
 	}
 	
 	/*接続規制されているかどうか*/

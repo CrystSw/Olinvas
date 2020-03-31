@@ -19,7 +19,7 @@ define('__PARDON_TIME', PARDON_TIME*60);
 //ロガーの初期化
 $GLOBALS['logger'] = new Logger(LOG_TYPE, LOG_OUTPUT_DIRECTORY);
 $GLOBALS['logger']->printLog(LOG_INFO, "###Olinvas websocket server has started.###");
-$GLOBALS['logger']->printLog(LOG_INFO, "###Server Version: 1.1.2 (for Client Version: 1.1.2)###");
+$GLOBALS['logger']->printLog(LOG_INFO, "###Server Version: 1.1.3 (for Client Version: 1.1.3)###");
 $GLOBALS['logger']->printLog(LOG_INFO, "###Protocol Version: 1.1###");
 
 //サーバスタートアップ

@@ -250,9 +250,11 @@ class OlinvasCore implements MessageComponentInterface {
 				||	$roomName === ''
 					//空パスワードを禁止している場合，空パスワードではないか
 				||	!ENABLE_NO_PASSWORD_ROOM && $roomPassword === ''
-					//パスワード及びルーム名が20文字以上ではないか
+					//ルームパスワードにマルチバイトが含まれていないか
+				||	strlen($roomPassword) !== mb_strlen($roomPassword)
+					//パスワード及びルーム名が20文字以下ではないか
 				||	mb_strlen($roomName) > 20
-				||	mb_strlen($roomPassword) > 20
+				||	strlen($roomPassword) > 20
 				)
 				{
 					/*パケット送信元へ拒否応答*/
@@ -328,17 +330,12 @@ class OlinvasCore implements MessageComponentInterface {
 				}
 				//----------------------------------
 				// リクエストチェック
+				/*ルームチェック*/
 				if(
 					//パケット送信者はどこのルームにも所属していないか
 					isset($this->userInfoByResId[$from->resourceId]['roomId'])
 					//ルームが存在しているか
 				||	!$this->isRoomExist($roomId)
-					//ルームの参加人数が上限を超えていないか
-				||	$this->roomInfo[$roomId]->getMemberNum() >= MAX_ROOM_MEMBER_NUM
-					//パスワードが20文字以上ではないか
-				||	mb_strlen($roomPassword) > 20
-					//ルームのパスワードが誤っていないか
-				||	$roomPassword !== $this->roomInfo[$roomId]->getPassword()
 				)
 				{
 					/*パケット送信元へ拒否応答*/
@@ -348,8 +345,54 @@ class OlinvasCore implements MessageComponentInterface {
 					//ログ出力
 					$GLOBALS['logger']->printLog(LOG_WARNING, "JoinRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
-					//無効パケット検出処理(意図せず起こりうる場合もあるので配慮)
+					//無効パケット検出処理(意図せず起こり得るので配慮)
 					$this->detectIllegalPacket($from, 5);
+					break;
+				}
+				/*参加人数超過(Banしない)*/
+				if(
+					//ルームの参加人数が上限を超えていないか
+					$this->roomInfo[$roomId]->getMemberNum() >= MAX_ROOM_MEMBER_NUM
+				)
+				{
+					/*パケット送信元へ拒否応答*/
+					$response = json_encode(array('response' => 'JoinRoom-Reject'));
+					$from->send($response);
+					
+					//ログ出力
+					$GLOBALS['logger']->printLog(LOG_WARNING, "JoinRoom-Reject: Request from '{$from->remoteAddress}'.");
+					break;
+				}
+				/*パスワード系*/
+				if(
+					//ルームパスワードにマルチバイトが含まれていないか
+					strlen($roomPassword) !== mb_strlen($roomPassword)
+					//パスワードが20文字以上ではないか
+				||	strlen($roomPassword) > 20
+				)
+				{
+					/*パケット送信元へ拒否応答*/
+					$response = json_encode(array('response' => 'JoinRoom-Reject'));
+					$from->send($response);
+					
+					//ログ出力
+					$GLOBALS['logger']->printLog(LOG_WARNING, "JoinRoom-Reject: Request from '{$from->remoteAddress}'.");
+					break;
+				}
+				if(
+					//ルームのパスワードが誤っていないか
+					$roomPassword !== $this->roomInfo[$roomId]->getPassword()
+				)
+				{
+					/*パケット送信元へ拒否応答*/
+					$response = json_encode(array('response' => 'JoinRoom-Reject'));
+					$from->send($response);
+					
+					//ログ出力
+					$GLOBALS['logger']->printLog(LOG_WARNING, "JoinRoom-Reject: Request from '{$from->remoteAddress}'.");
+					
+					//無効パケット検出処理(意図せず起こり得るので配慮)
+					$this->detectIllegalPacket($from, (1.0-levenshtein($this->roomInfo[$roomId]->getPassword(), $roomPassword)/max(strlen($this->roomInfo[$roomId]->getPassword()), strlen($roomPassword)))*20);
 					break;
 				}
 				//==================================
@@ -415,8 +458,6 @@ class OlinvasCore implements MessageComponentInterface {
 					($roomId = $this->getRoomIdFromConn($from)) === null
 					//既にフレンド権限を持っていないか
 				||	$this->roomInfo[$roomId]->isFriendMember($from)
-					//フレンドキーが誤っていないか
-				||	$roomFriendKey !== $this->roomInfo[$roomId]->getFriendKey()
 				)
 				{
 					/*パケット送信元へ拒否応答*/
@@ -428,6 +469,41 @@ class OlinvasCore implements MessageComponentInterface {
 					
 					//無効パケット検出処理(意図せず起こりうる場合もあるので配慮)
 					$this->detectIllegalPacket($from, 5);
+					break;
+				}
+				/*パスワード系*/
+				if(
+					//フレンドキーにマルチバイトが含まれていないか
+					strlen($roomFriendKey) !== mb_strlen($roomFriendKey)
+					//フレンドキーが12文字以上ではないか
+				||	strlen($roomPassword) > 20
+				)
+				{
+					/*パケット送信元へ拒否応答*/
+					$response = json_encode(array('response' => 'FriendAuth-Reject'));
+					$from->send($response);
+					
+					//ログ出力
+					$GLOBALS['logger']->printLog(LOG_WARNING, "FriendAuth-Reject: Request from '{$from->remoteAddress}'.");
+					
+					//無効パケット検出処理(意図せず起こりうる場合もあるので配慮)
+					$this->detectIllegalPacket($from, 5);
+					break;
+				}
+				if(
+					//フレンドキーが誤っていないか
+					$roomFriendKey !== $this->roomInfo[$roomId]->getFriendKey()
+				)
+				{
+					/*パケット送信元へ拒否応答*/
+					$response = json_encode(array('response' => 'FriendAuth-Reject'));
+					$from->send($response);
+					
+					//ログ出力
+					$GLOBALS['logger']->printLog(LOG_WARNING, "FriendAuth-Reject: Request from '{$from->remoteAddress}'.");
+					
+					//無効パケット検出処理(意図せず起こり得るので配慮)
+					$this->detectIllegalPacket($from, (1.0-levenshtein($this->roomInfo[$roomId]->getFriendKey(), $roomFriendKey)/max(strlen($this->roomInfo[$roomId]->getFriendKey()), strlen($roomFriendKey)))*12);
 					break;
 				}
 				//==================================

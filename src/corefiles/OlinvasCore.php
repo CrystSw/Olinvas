@@ -377,6 +377,9 @@ class OlinvasCore implements MessageComponentInterface {
 					
 					//ログ出力
 					$GLOBALS['logger']->printLog(LOG_WARNING, "JoinRoom-Reject: Request from '{$from->remoteAddress}'.");
+					
+					//無効パケット検出処理(意図せず起こり得るので配慮)
+					$this->detectIllegalPacket($from, 5);
 					break;
 				}
 				if(
@@ -392,7 +395,7 @@ class OlinvasCore implements MessageComponentInterface {
 					$GLOBALS['logger']->printLog(LOG_WARNING, "JoinRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理(意図せず起こり得るので配慮)
-					$this->detectIllegalPacket($from, (1.0-levenshtein($this->roomInfo[$roomId]->getPassword(), $roomPassword)/max(strlen($this->roomInfo[$roomId]->getPassword()), strlen($roomPassword)))*20);
+					$this->detectIllegalPacket($from, (levenshtein($this->roomInfo[$roomId]->getPassword(), $roomPassword)/max(strlen($this->roomInfo[$roomId]->getPassword()), strlen($roomPassword)))*20);
 					break;
 				}
 				//==================================
@@ -503,7 +506,7 @@ class OlinvasCore implements MessageComponentInterface {
 					$GLOBALS['logger']->printLog(LOG_WARNING, "FriendAuth-Reject: Request from '{$from->remoteAddress}'.");
 					
 					//無効パケット検出処理(意図せず起こり得るので配慮)
-					$this->detectIllegalPacket($from, (1.0-levenshtein($this->roomInfo[$roomId]->getFriendKey(), $roomFriendKey)/max(strlen($this->roomInfo[$roomId]->getFriendKey()), strlen($roomFriendKey)))*12);
+					$this->detectIllegalPacket($from, (levenshtein($this->roomInfo[$roomId]->getFriendKey(), $roomFriendKey)/max(strlen($this->roomInfo[$roomId]->getFriendKey()), strlen($roomFriendKey)))*12);
 					break;
 				}
 				//==================================

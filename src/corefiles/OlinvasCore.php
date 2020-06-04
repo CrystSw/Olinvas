@@ -152,7 +152,10 @@ class OlinvasCore implements MessageComponentInterface {
 					$this->roomInfo[$roomId]->registHistory($response);
 				}else{
 					//CheckPoint要求中は仮Historyに登録
-					$this->roomInfo[$roomId]->registTmpHistory($response);
+					//仮Historyの上限は，History上限の半分
+					if($this->roomInfo[$roomId]->getTmpHistoryNum() < MAX_HISTORY_NUM/2){
+						$this->roomInfo[$roomId]->registTmpHistory($response);
+					}
 					return;
 				}
 				

@@ -56,7 +56,7 @@ define('AUTO_IP_BAN', true);
 // (AUTO_IP_BANがfalseの場合，このオプションは無視されます)
 // (あるクライアントについて，不正なパケットを送信するなど不審な挙動を行った場合減少し，0になると自動的に接続拒否します．(既存のセッションも全て停止します．))
 // (default: 100)
-define('MAX_CLIENT_SCORE', 100)
+define('MAX_CLIENT_SCORE', 100);
 // 接続拒否されたクライアントが回復するまでの時間(分)
 // (AUTO_IP_BANがfalseの場合，このオプションは無視されます)
 // (default: 30)

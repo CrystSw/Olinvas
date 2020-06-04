@@ -23,7 +23,7 @@ class RoomInfo {
 		$this->host = $host;
 		$this->name = $roomName;
 		$this->password = $roomPassword;
-		$this->friendKey = base64_encode(openssl_random_pseudo_bytes(6));
+		$this->friendKey = base64_encode(openssl_random_pseudo_bytes(9));
 		$this->member = [];
 		$this->friendMember = [];
 		$this->memberNum = 0;

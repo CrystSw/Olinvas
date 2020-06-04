@@ -25,7 +25,8 @@ class OlinvasCore implements MessageComponentInterface {
 			hostRoomNum(integer) - ホストルーム数
 			connectionList(string)
 			=> <resourceId>(conn-list) - コネクション
-			illegalPacketNum(Integer) - 無効パケットの検出数
+			--*廃止*-- illegalPacketNum(Integer) - 無効パケットの検出数
+			clientScore - クライアントのスコア
 			isBanned(boolean) - 接続規制中か
 			banTime(Integer) - 規制された時間
 		//コネクションをリストで管理しないのは，リストの処理を定数オーダで行うためです．その代わり，メモリが無駄になっていますが…
@@ -232,9 +233,8 @@ class OlinvasCore implements MessageComponentInterface {
 					//ログ出力
 					$GLOBALS['logger']->printLog(LOG_WARNING, "CreateRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
-					//CreateRoomは認証ではないので，構造が適切であれば無効パケットでも許す
 					//無効パケット検出処理
-					//$this->detectIllegalPacket($from);
+					$this->detectIllegalPacket($from);
 					break;
 				}
 				//----------------------------------
@@ -250,6 +250,9 @@ class OlinvasCore implements MessageComponentInterface {
 				||	$roomName === ''
 					//空パスワードを禁止している場合，空パスワードではないか
 				||	!ENABLE_NO_PASSWORD_ROOM && $roomPassword === ''
+					//パスワード及びルーム名が20文字以上ではないか
+				||	mb_strlen($roomName) > 20
+				||	mb_strlen($roomPassword) > 20
 				)
 				{
 					/*パケット送信元へ拒否応答*/
@@ -259,8 +262,8 @@ class OlinvasCore implements MessageComponentInterface {
 					//ログ出力
 					$GLOBALS['logger']->printLog(LOG_WARNING, "CreateRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
-					//無効パケット検出処理
-					//$this->detectIllegalPacket($from);
+					//無効パケット検出処理(意図せず起こり得るので配慮)
+					$this->detectIllegalPacket($from, 1);
 					break;
 				}
 				//==================================
@@ -269,7 +272,7 @@ class OlinvasCore implements MessageComponentInterface {
 				/*予測不可能なルームIDを生成*/
 				$newRoomId = null;
 				do{
-					$newRoomId = md5(openssl_random_pseudo_bytes(8));
+					$newRoomId = hash('sha256', openssl_random_pseudo_bytes(64));
 					//既存のルームIDと衝突しないように
 				}while(isset($this->roomIndo[$newRoomId]));
 				
@@ -332,6 +335,8 @@ class OlinvasCore implements MessageComponentInterface {
 				||	!$this->isRoomExist($roomId)
 					//ルームの参加人数が上限を超えていないか
 				||	$this->roomInfo[$roomId]->getMemberNum() >= MAX_ROOM_MEMBER_NUM
+					//パスワードが20文字以上ではないか
+				||	mb_strlen($roomPassword) > 20
 					//ルームのパスワードが誤っていないか
 				||	$roomPassword !== $this->roomInfo[$roomId]->getPassword()
 				)
@@ -343,8 +348,8 @@ class OlinvasCore implements MessageComponentInterface {
 					//ログ出力
 					$GLOBALS['logger']->printLog(LOG_WARNING, "JoinRoom-Reject: Request from '{$from->remoteAddress}'.");
 					
-					//無効パケット検出処理
-					$this->detectIllegalPacket($from);
+					//無効パケット検出処理(意図せず起こりうる場合もあるので配慮)
+					$this->detectIllegalPacket($from, 5);
 					break;
 				}
 				//==================================
@@ -421,8 +426,8 @@ class OlinvasCore implements MessageComponentInterface {
 					//ログ出力
 					$GLOBALS['logger']->printLog(LOG_WARNING, "FriendAuth-Reject: Request from '{$from->remoteAddress}'.");
 					
-					//無効パケット検出処理
-					$this->detectIllegalPacket($from);
+					//無効パケット検出処理(意図せず起こりうる場合もあるので配慮)
+					$this->detectIllegalPacket($from, 5);
 					break;
 				}
 				//==================================
@@ -657,17 +662,17 @@ __response:
 	}
 	
 	/*接続規制処理*/
-	private function detectIllegalPacket(ConnectionInterface $conn){
+	private function detectIllegalPacket(ConnectionInterface $conn, $score = 10){
 		if(AUTO_IP_BAN){
 			/*無効パケット検出数の増加処理*/
-			if(!isset($this->userInfoByIPAddr[$conn->remoteAddress]['illegalPacketNum'])){
-				$this->userInfoByIPAddr[$conn->remoteAddress]['illegalPacketNum'] = 1;
+			if(!isset($this->userInfoByIPAddr[$conn->remoteAddress]['clientScore'])){
+				$this->userInfoByIPAddr[$conn->remoteAddress]['clientScore'] = MAX_CLIENT_SCORE - $score;
 			}else{
-				++$this->userInfoByIPAddr[$conn->remoteAddress]['illegalPacketNum'];
+				$this->userInfoByIPAddr[$conn->remoteAddress]['clientScore'] -= $score;
 			}
 			/*Ban判定*/
-			//無効パケット数がコンフィグで指定した上限を超えた場合，BANを実施
-			if($this->userInfoByIPAddr[$conn->remoteAddress]['illegalPacketNum'] >= ALLOW_INVALID_PACKET_NUM){
+			//クライアントスコアが0点を下回った場合，BANを実施
+			if($this->userInfoByIPAddr[$conn->remoteAddress]['clientScore'] <= 0){
 				//Banフラグ
 				$this->userInfoByIPAddr[$conn->remoteAddress]['isBanned'] = true;
 				//Banを実施した時間を記録
@@ -693,7 +698,7 @@ __response:
 		//Banフラグ解除
 		$this->userInfoByIPAddr[$conn->remoteAddress]['isBanned'] = false;
 		//無効パケット数リセット
-		$this->userInfoByIPAddr[$conn->remoteAddress]['illegalPacketNum'] = 0;
+		$this->userInfoByIPAddr[$conn->remoteAddress]['clientScore'] = MAX_CLIENT_SCORE;
 			
 		//ログ出力
 		$GLOBALS['logger']->printLog(LOG_INFO, "PardonConnection: '{$conn->remoteAddress}' has pardoned on this server.");

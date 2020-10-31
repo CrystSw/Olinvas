@@ -1,7 +1,7 @@
 /*==============================
 Olinvas Client
 --------------------------------
-client ver.1.1.2
+client ver.1.1.4.1
 protocol ver.1.1
 ==============================*/
 
@@ -173,7 +173,9 @@ var serverPort = 13181;
 					break;
 					
 				case 'ClearBoard-Echo':
-					ctx.clearRect(0, 0, canvas.width, canvas.height);
+					//ctx.clearRect(0, 0, canvas.width, canvas.height);
+					ctx.fillStyle = "rgb(255,255,255)";
+					ctx.fillRect(0, 0, canvas.width, canvas.height);
 					break;
 					
 				case 'TooConnection-Echo':
@@ -361,6 +363,9 @@ var serverPort = 13181;
 		var mouseX = null;
 		var mouseY = null;
 		var pointerId = null;
+		
+		ctx.fillStyle = "rgb(255,255,255)";
+		ctx.fillRect(0, 0, canvas.width, canvas.height);
 		
 		function drawStart(event){
 			if(event.pointerType === 'pen' && pointerId === null){

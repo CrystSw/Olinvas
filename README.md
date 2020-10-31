@@ -20,7 +20,7 @@ Olinvasでは，WebSocketサーバの作成にRatchet+PHPを利用していま�
     1. config.phpのrequire_onceを編集し，composerのauto_load.phpのパスを指定してください．
     2. その他，必要に応じてconfig.phpの設定を行ってください．
         1. ポート番号を変更した場合，後述するwebrootのjs/olinvas.jsのポート番号も同じ値に変更してください．
-        2. ポート番号はデフォルトで3181です．
+        2. ポート番号はデフォルトで13181です．
 5. webrootの配置
     1. webrootディレクトリの中身を，HTTPサーバのルートディレクトリに配置してください．
     2. ルートディレクトリでなくとも，その他の適切な場所でも構いません．

@@ -479,7 +479,7 @@ class OlinvasCore implements MessageComponentInterface {
 					//フレンドキーにマルチバイトが含まれていないか
 					strlen($roomFriendKey) !== mb_strlen($roomFriendKey)
 					//フレンドキーが12文字以上ではないか
-				||	strlen($roomPassword) > 20
+				||	strlen($roomFriendKey) > 12
 				)
 				{
 					/*パケット送信元へ拒否応答*/
